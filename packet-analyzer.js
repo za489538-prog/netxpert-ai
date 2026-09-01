@@ -3,6 +3,8 @@
 // محاكاة لتجربة Wireshark ببيانات وهمية واقعية الشكل
 // ============================================
 
+import { filterPackets } from "./logic/packet-filter-logic.js";
+
 const PROTOCOLS = ['TCP', 'UDP', 'HTTP', 'HTTPS', 'DNS', 'ICMP', 'ARP'];
 const SAMPLE_IPS = [
     '192.168.1.1', '192.168.1.10', '192.168.1.25',
@@ -71,18 +73,7 @@ function renderPackets(packets) {
 }
 
 function applyFilter(filterText) {
-    if (!filterText.trim()) {
-        renderPackets(allPackets);
-        return;
-    }
-    const query = filterText.trim().toLowerCase();
-    const filtered = allPackets.filter(p =>
-        p.protocol.toLowerCase().includes(query) ||
-        p.source.includes(query) ||
-        p.destination.includes(query) ||
-        p.info.toLowerCase().includes(query)
-    );
-    renderPackets(filtered);
+    renderPackets(filterPackets(allPackets, filterText));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
