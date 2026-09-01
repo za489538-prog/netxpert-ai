@@ -12,6 +12,37 @@
 
 const CHAT_ENDPOINT = "/api/gemini-chat";
 
+// الأخطاء المؤقتة اللي يستاهل نعيد المحاولة معها (429 = Rate Limit، 500/502/503/504 = مشاكل سيرفر مؤقتة)
+const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504];
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 800;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url, options, attempt = 1) {
+    let response;
+    try {
+        response = await fetch(url, options);
+    } catch (networkErr) {
+        // خطأ شبكة (مثلاً النت انقطع) - نعتبره قابل لإعادة المحاولة
+        if (attempt < MAX_RETRIES) {
+            await sleep(BASE_DELAY_MS * 2 ** (attempt - 1));
+            return fetchWithRetry(url, options, attempt + 1);
+        }
+        throw new Error('تعذر الاتصال بالخادم بعد عدة محاولات. تأكد من اتصالك بالإنترنت.');
+    }
+
+    if (!response.ok && RETRYABLE_STATUS_CODES.includes(response.status) && attempt < MAX_RETRIES) {
+        // انتظار تصاعدي (Exponential Backoff): 800ms ثم 1600ms ثم 3200ms
+        await sleep(BASE_DELAY_MS * 2 ** (attempt - 1));
+        return fetchWithRetry(url, options, attempt + 1);
+    }
+
+    return response;
+}
+
 const aiBtn = document.getElementById('aiBtn');
 const aiModal = document.getElementById('aiModal');
 const aiChatWindow = document.getElementById('aiChatWindow');
@@ -36,7 +67,7 @@ async function sendToGemini(userMessage) {
     // نبني سياق المحادثة كامل عشان المساعد يتذكر الكلام السابق
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const response = await fetch(CHAT_ENDPOINT, {
+    const response = await fetchWithRetry(CHAT_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chatHistory })

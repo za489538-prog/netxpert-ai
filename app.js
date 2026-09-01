@@ -5,6 +5,7 @@
 
 import { auth, db } from "./firebase-config.js";
 import { isValidIp, calculateSubnet } from "./logic/subnet-logic.js";
+import { isIPv6, isValidIPv6, calculateIPv6Subnet } from "./logic/ipv6-logic.js";
 import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
@@ -28,6 +29,7 @@ const cidrValue = document.getElementById('cidrValue');
 const calcBtn = document.getElementById('calcBtn');
 const resultBox = document.getElementById('result');
 const errorBox = document.getElementById('errorBox');
+const ipVersionBadge = document.getElementById('ipVersionBadge');
 
 const authBtn = document.getElementById('authBtn');
 const userStatus = document.getElementById('userStatus');
@@ -45,6 +47,40 @@ const historyList = document.getElementById('historyList');
 let currentUser = null;
 let authMode = 'login'; // 'login' or 'register'
 let unsubscribeHistory = null;
+
+// ---------- اكتشاف نوع العنوان (IPv4 / IPv6) أثناء الكتابة ----------
+if (ipVersionBadge) {
+    ipInput.addEventListener('input', () => {
+        const value = ipInput.value.trim();
+
+        if (!value) {
+            ipVersionBadge.style.display = 'none';
+            return;
+        }
+
+        if (isIPv6(value)) {
+            ipVersionBadge.textContent = 'تم اكتشاف عنوان IPv6';
+            ipVersionBadge.className = 'ip-version-badge badge-v6';
+            ipVersionBadge.style.display = 'inline-block';
+            if (cidrInput.max !== '128') {
+                cidrInput.max = 128;
+                cidrInput.value = 64;
+                cidrValue.textContent = 64;
+            }
+        } else {
+            ipVersionBadge.textContent = 'تم اكتشاف عنوان IPv4';
+            ipVersionBadge.className = 'ip-version-badge badge-v4';
+            ipVersionBadge.style.display = 'inline-block';
+            if (cidrInput.max !== '32') {
+                cidrInput.max = 32;
+                if (parseInt(cidrInput.value, 10) > 32) {
+                    cidrInput.value = 24;
+                    cidrValue.textContent = 24;
+                }
+            }
+        }
+    });
+}
 
 // ---------- Subnetting: المنطق منقول لملف logic/subnet-logic.js (قابل للاختبار بـ Jest) ----------
 cidrInput.addEventListener('input', () => {
@@ -79,6 +115,21 @@ function renderResult(data) {
     `;
 }
 
+function renderIPv6Result(data) {
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = `
+        <table>
+            <tr><td>عنوان IPv6</td><td>${data.ip}</td></tr>
+            <tr><td>Prefix Length</td><td>/${data.prefix}</td></tr>
+            <tr><td>Network Address</td><td>${data.networkAddress}</td></tr>
+            <tr><td>آخر عنوان بالنطاق</td><td>${data.lastAddress}</td></tr>
+            <tr><td>إجمالي العناوين</td><td>${data.totalAddresses}</td></tr>
+            <tr><td>نوع العنوان</td><td>${data.addressType}</td></tr>
+        </table>
+        <p class="ipv6-note">💡 ملاحظة: IPv6 لا يستخدم مفهوم Broadcast مثل IPv4 — بديله الرسمي هو Multicast.</p>
+    `;
+}
+
 calcBtn.addEventListener('click', async function () {
     const ip = ipInput.value.trim();
     const cidr = parseInt(cidrInput.value, 10);
@@ -86,6 +137,31 @@ calcBtn.addEventListener('click', async function () {
     clearError();
 
     if (!ip) return showError('الرجاء إدخال عنوان IP.');
+
+    // ---------- IPv6 ----------
+    if (isIPv6(ip)) {
+        if (!isValidIPv6(ip)) return showError('عنوان الـ IPv6 غير صحيح. تأكد من الصيغة (مثال: 2001:db8::1)');
+
+        const data = calculateIPv6Subnet(ip, cidr);
+        renderIPv6Result(data);
+
+        if (currentUser) {
+            try {
+                await addDoc(collection(db, 'users', currentUser.uid, 'history'), {
+                    ip: data.ip,
+                    cidr: data.prefix,
+                    networkAddress: data.networkAddress,
+                    broadcastAddress: 'N/A (IPv6)',
+                    createdAt: serverTimestamp()
+                });
+            } catch (err) {
+                console.error('فشل حفظ السجل:', err);
+            }
+        }
+        return;
+    }
+
+    // ---------- IPv4 ----------
     if (!isValidIp(ip)) return showError('عنوان الـ IP غير صحيح. تأكد من الصيغة (مثال: 192.168.1.1)');
 
     const data = calculateSubnet(ip, cidr);

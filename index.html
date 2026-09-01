@@ -34,7 +34,8 @@
                 <div class="card">
                     <h3>أدخل عنوان IP و CIDR</h3>
 
-                    <input type="text" id="ipInput" placeholder="مثال: 192.168.1.10">
+                    <input type="text" id="ipInput" placeholder="مثال: 192.168.1.10 أو 2001:db8::1">
+                    <div id="ipVersionBadge" class="ip-version-badge" style="display:none;"></div>
 
                     <label class="cidr-label">Prefix / CIDR: <span id="cidrValue">24</span></label>
                     <input type="range" id="cidrInput" min="0" max="32" value="24">
