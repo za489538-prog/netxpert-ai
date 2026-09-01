@@ -11,7 +11,7 @@
 //   GEMINI_API_KEY = المفتاح_الجديد_من_AI_Studio
 // ============================================
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-3,6-flash";
 
 const SYSTEM_CONTEXT = `أنت مساعد تقني متخصص بالشبكات (Networking) وأنظمة IT، تعمل داخل منصة NetXpert AI.
 جاوب بالعربية بشكل واضح ومختصر، وركز على مواضيع الشبكات، الـ Subnetting، الـ IP addressing، وأمن المعلومات.`;
