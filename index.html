@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetXpert AI - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <aside class="sidebar">
+            <h2 class="logo">NetXpert <span>AI</span></h2>
+            <ul class="nav-links">
+                <li><a href="#" class="active" data-view="subnetting">أدوات الشبكات (Subnetting)</a></li>
+                <li><a href="#" data-view="algorithm">محاكي الخوارزميات</a></li>
+                <li><a href="#" data-view="wireshark">تحليل البيانات (Wireshark)</a></li>
+                <li><a href="#" data-view="terminal">سطر الأوامر (Linux Terminal)</a></li>
+            </ul>
+        </aside>
+        <!-- منطقة العمل الرئيسية -->
+        <main class="main-content">
+            <header>
+                <h1 id="pageTitle">حاسبة الشبكات المتقدمة</h1>
+                <div class="header-actions">
+                    <span id="userStatus" class="user-status">غير مسجل الدخول</span>
+                    <button id="authBtn" class="auth-btn">تسجيل الدخول</button>
+                    <button id="aiBtn" class="ai-btn">اسأل المساعد الذكي 🤖</button>
+                </div>
+            </header>
+
+            <!-- ===== View 1: Subnetting ===== -->
+            <section class="tool-workspace view-section" id="view-subnetting">
+                <div class="card">
+                    <h3>أدخل عنوان IP و CIDR</h3>
+
+                    <input type="text" id="ipInput" placeholder="مثال: 192.168.1.10">
+
+                    <label class="cidr-label">Prefix / CIDR: <span id="cidrValue">24</span></label>
+                    <input type="range" id="cidrInput" min="0" max="32" value="24">
+
+                    <button id="calcBtn">تحليل الشبكة</button>
+
+                    <div id="errorBox" class="error-box"></div>
+
+                    <div id="result" class="result-box">
+                        <!-- تظهر النتائج هنا -->
+                    </div>
+                </div>
+
+                <!-- سجل العمليات السابقة (يظهر فقط لو المستخدم مسجل دخول) -->
+                <div class="card history-card" id="historyCard" style="display:none;">
+                    <h3>سجل عمليات البحث 📜</h3>
+                    <ul id="historyList" class="history-list"></ul>
+                </div>
+            </section>
+
+            <!-- ===== View 2: Algorithm Simulator (Dijkstra) ===== -->
+            <section class="tool-workspace view-section" id="view-algorithm" style="display:none;">
+                <div class="card algo-card">
+                    <h3>محاكي خوارزمية Dijkstra لإيجاد أقصر مسار 🌐</h3>
+                    <p class="algo-desc">اختر روتر البداية والنهاية، وشوف كيف تحسب الخوارزمية أقصر مسار عبر الشبكة تلقائياً.</p>
+
+                    <div class="algo-controls">
+                        <div class="algo-select-group">
+                            <label>من (Source)</label>
+                            <select id="sourceSelect"></select>
+                        </div>
+                        <div class="algo-select-group">
+                            <label>إلى (Destination)</label>
+                            <select id="destSelect"></select>
+                        </div>
+                        <button id="findPathBtn">إيجاد أقصر مسار</button>
+                    </div>
+
+                    <svg id="algoSvg" viewBox="0 0 700 400" class="algo-svg"></svg>
+
+                    <div id="algoResult" class="algo-result" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ===== View 3: Wireshark-style Packet Analyzer ===== -->
+            <section class="tool-workspace view-section" id="view-wireshark" style="display:none;">
+                <div class="card wireshark-card">
+                    <h3>محاكي تحليل الحزم (Packet Analyzer) 📡</h3>
+                    <p class="algo-desc">محاكاة لتجربة أداة Wireshark: حزم بيانات وهمية واقعية الشكل، مع إمكانية الفلترة.</p>
+
+                    <div class="wireshark-toolbar">
+                        <input type="text" id="packetFilter" placeholder="فلتر مثل: TCP أو 192.168.1.1">
+                        <button id="captureBtn">🔄 التقاط حزم جديدة</button>
+                    </div>
+
+                    <div class="wireshark-table-wrap">
+                        <table class="wireshark-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الوقت</th>
+                                    <th>المصدر</th>
+                                    <th>الوجهة</th>
+                                    <th>البروتوكول</th>
+                                    <th>الحجم</th>
+                                    <th>معلومات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packetTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== View 4: Linux Terminal Simulator ===== -->
+            <section class="tool-workspace view-section" id="view-terminal" style="display:none;">
+                <div class="card terminal-card">
+                    <h3>محاكي طرفية Linux 🐧</h3>
+                    <p class="algo-desc">جرب أوامر شبكات حقيقية زي ping، ifconfig, traceroute. اكتب <code>help</code> لعرض كل الأوامر.</p>
+
+                    <div class="terminal-window" id="terminalWindow">
+                        <div class="terminal-line">مرحباً بك في NetXpert Terminal Simulator. اكتب "help" للمساعدة.</div>
+                    </div>
+                    <div class="terminal-input-row">
+                        <span class="terminal-prompt">user@netxpert:~$</span>
+                        <input type="text" id="terminalInput" autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal تسجيل الدخول / إنشاء حساب -->
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" data-close="authModal">✕</button>
+            <h3 id="authModalTitle">تسجيل الدخول</h3>
+            <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
+            <input type="password" id="authPassword" placeholder="كلمة المرور">
+            <div id="authError" class="error-box"></div>
+            <button id="authSubmitBtn" class="submit-btn">دخول</button>
+            <p class="switch-text">
+                ما عندك حساب؟ <a href="#" id="switchToRegister">أنشئ حساب جديد</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Modal المساعد الذكي -->
+    <div id="aiModal" class="modal-overlay">
+        <div class="modal-box ai-modal-box">
+            <button class="modal-close" data-close="aiModal">✕</button>
+            <h3>المساعد الذكي 🤖</h3>
+            <div id="aiChatWindow" class="ai-chat-window">
+                <div class="ai-msg ai-msg-bot">مرحباً! أنا مساعدك التقني في NetXpert AI. اسألني عن أي شي متعلق بالشبكات.</div>
+            </div>
+            <div class="ai-input-row">
+                <input type="text" id="aiInput" placeholder="اكتب سؤالك هنا...">
+                <button id="aiSendBtn">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+    <script type="module" src="ai-assistant.js"></script>
+    <script src="algorithm-simulator.js"></script>
+    <script src="packet-analyzer.js"></script>
+    <script src="terminal-simulator.js"></script>
+    <script src="navigation.js"></script>
+</body>
+</html>

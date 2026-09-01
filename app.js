@@ -1,0 +1,290 @@
+// ============================================
+// NetXpert AI - Main App
+// (Subnetting Calculator + Firebase Auth + Firestore History)
+// ============================================
+
+import { auth, db } from "./firebase-config.js";
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+    collection,
+    addDoc,
+    query,
+    orderBy,
+    limit,
+    onSnapshot,
+    serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+// ---------- عناصر DOM ----------
+const ipInput = document.getElementById('ipInput');
+const cidrInput = document.getElementById('cidrInput');
+const cidrValue = document.getElementById('cidrValue');
+const calcBtn = document.getElementById('calcBtn');
+const resultBox = document.getElementById('result');
+const errorBox = document.getElementById('errorBox');
+
+const authBtn = document.getElementById('authBtn');
+const userStatus = document.getElementById('userStatus');
+const authModal = document.getElementById('authModal');
+const authModalTitle = document.getElementById('authModalTitle');
+const authEmail = document.getElementById('authEmail');
+const authPassword = document.getElementById('authPassword');
+const authError = document.getElementById('authError');
+const authSubmitBtn = document.getElementById('authSubmitBtn');
+const switchToRegister = document.getElementById('switchToRegister');
+
+const historyCard = document.getElementById('historyCard');
+const historyList = document.getElementById('historyList');
+
+let currentUser = null;
+let authMode = 'login'; // 'login' or 'register'
+let unsubscribeHistory = null;
+
+// ---------- Subnetting: نفس الخوارزمية السابقة ----------
+cidrInput.addEventListener('input', () => {
+    cidrValue.textContent = cidrInput.value;
+});
+
+function ipToInt(ip) {
+    const parts = ip.split('.').map(Number);
+    return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
+}
+
+function intToIp(int) {
+    return [
+        (int >>> 24) & 255,
+        (int >>> 16) & 255,
+        (int >>> 8) & 255,
+        int & 255
+    ].join('.');
+}
+
+function isValidIp(ip) {
+    const regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    const match = ip.match(regex);
+    if (!match) return false;
+    return match.slice(1).every(octet => Number(octet) >= 0 && Number(octet) <= 255);
+}
+
+function getIpClassAndType(firstOctet) {
+    if (firstOctet >= 1 && firstOctet <= 126) return 'A';
+    if (firstOctet === 127) return 'Loopback';
+    if (firstOctet >= 128 && firstOctet <= 191) return 'B';
+    if (firstOctet >= 192 && firstOctet <= 223) return 'C';
+    if (firstOctet >= 224 && firstOctet <= 239) return 'D (Multicast)';
+    return 'E (Experimental)';
+}
+
+function isPrivateIp(parts) {
+    const [a, b] = parts;
+    if (a === 10) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    return false;
+}
+
+function calculateSubnet(ip, cidr) {
+    const ipInt = ipToInt(ip);
+    const maskInt = cidr === 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) >>> 0;
+    const networkInt = (ipInt & maskInt) >>> 0;
+    const broadcastInt = (networkInt | (~maskInt >>> 0)) >>> 0;
+    const totalHosts = Math.pow(2, 32 - cidr);
+
+    let firstHost, lastHost, usableHosts;
+    if (cidr >= 31) {
+        firstHost = intToIp(networkInt);
+        lastHost = intToIp(broadcastInt);
+        usableHosts = cidr === 32 ? 1 : 2;
+    } else {
+        firstHost = intToIp(networkInt + 1);
+        lastHost = intToIp(broadcastInt - 1);
+        usableHosts = totalHosts - 2;
+    }
+
+    const parts = ip.split('.').map(Number);
+
+    return {
+        ip, cidr,
+        subnetMask: intToIp(maskInt),
+        networkAddress: intToIp(networkInt),
+        broadcastAddress: intToIp(broadcastInt),
+        firstHost, lastHost, totalHosts, usableHosts,
+        ipClass: getIpClassAndType(parts[0]),
+        isPrivate: isPrivateIp(parts)
+    };
+}
+
+function showError(message) {
+    errorBox.textContent = message;
+    errorBox.style.display = 'block';
+    resultBox.style.display = 'none';
+}
+
+function clearError() {
+    errorBox.style.display = 'none';
+}
+
+function renderResult(data) {
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = `
+        <table>
+            <tr><td>عنوان IP</td><td>${data.ip}</td></tr>
+            <tr><td>Subnet Mask</td><td>${data.subnetMask} (/${data.cidr})</td></tr>
+            <tr><td>Network Address</td><td>${data.networkAddress}</td></tr>
+            <tr><td>Broadcast Address</td><td>${data.broadcastAddress}</td></tr>
+            <tr><td>أول IP صالح</td><td>${data.firstHost}</td></tr>
+            <tr><td>آخر IP صالح</td><td>${data.lastHost}</td></tr>
+            <tr><td>إجمالي العناوين</td><td>${data.totalHosts.toLocaleString()}</td></tr>
+            <tr><td>عدد Hosts القابلة للاستخدام</td><td>${data.usableHosts.toLocaleString()}</td></tr>
+            <tr><td>فئة العنوان (Class)</td><td>${data.ipClass}</td></tr>
+            <tr><td>نوع العنوان</td><td>${data.isPrivate ? 'خاص (Private) 🔒' : 'عام (Public) 🌐'}</td></tr>
+        </table>
+    `;
+}
+
+calcBtn.addEventListener('click', async function () {
+    const ip = ipInput.value.trim();
+    const cidr = parseInt(cidrInput.value, 10);
+
+    clearError();
+
+    if (!ip) return showError('الرجاء إدخال عنوان IP.');
+    if (!isValidIp(ip)) return showError('عنوان الـ IP غير صحيح. تأكد من الصيغة (مثال: 192.168.1.1)');
+
+    const data = calculateSubnet(ip, cidr);
+    renderResult(data);
+
+    // احفظ العملية في Firestore لو المستخدم مسجل دخول
+    if (currentUser) {
+        try {
+            await addDoc(collection(db, 'users', currentUser.uid, 'history'), {
+                ip: data.ip,
+                cidr: data.cidr,
+                networkAddress: data.networkAddress,
+                broadcastAddress: data.broadcastAddress,
+                createdAt: serverTimestamp()
+            });
+        } catch (err) {
+            console.error('فشل حفظ السجل:', err);
+        }
+    }
+});
+
+ipInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') calcBtn.click();
+});
+
+// ---------- Auth: تسجيل الدخول / إنشاء حساب / تسجيل الخروج ----------
+function openAuthModal(mode) {
+    authMode = mode;
+    authModalTitle.textContent = mode === 'login' ? 'تسجيل الدخول' : 'إنشاء حساب جديد';
+    authSubmitBtn.textContent = mode === 'login' ? 'دخول' : 'إنشاء الحساب';
+    switchToRegister.textContent = mode === 'login' ? 'أنشئ حساب جديد' : 'سجل دخولك';
+    authEmail.value = '';
+    authPassword.value = '';
+    authError.style.display = 'none';
+    authModal.classList.add('open');
+}
+
+function closeModal(modal) {
+    modal.classList.remove('open');
+}
+
+authBtn.addEventListener('click', () => {
+    if (currentUser) {
+        signOut(auth);
+    } else {
+        openAuthModal('login');
+    }
+});
+
+switchToRegister.addEventListener('click', (e) => {
+    e.preventDefault();
+    openAuthModal(authMode === 'login' ? 'register' : 'login');
+});
+
+document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(document.getElementById(btn.dataset.close)));
+});
+
+authSubmitBtn.addEventListener('click', async () => {
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+
+    authError.style.display = 'none';
+
+    if (!email || !password) {
+        authError.textContent = 'الرجاء تعبئة كل الحقول.';
+        authError.style.display = 'block';
+        return;
+    }
+
+    try {
+        if (authMode === 'login') {
+            await signInWithEmailAndPassword(auth, email, password);
+        } else {
+            await createUserWithEmailAndPassword(auth, email, password);
+        }
+        closeModal(authModal);
+    } catch (err) {
+        authError.textContent = translateFirebaseError(err.code);
+        authError.style.display = 'block';
+    }
+});
+
+function translateFirebaseError(code) {
+    const map = {
+        'auth/email-already-in-use': 'هذا البريد مستخدم مسبقاً.',
+        'auth/invalid-email': 'صيغة البريد الإلكتروني غير صحيحة.',
+        'auth/weak-password': 'كلمة المرور ضعيفة (6 أحرف على الأقل).',
+        'auth/user-not-found': 'المستخدم غير موجود.',
+        'auth/wrong-password': 'كلمة المرور غير صحيحة.',
+        'auth/invalid-credential': 'بيانات الدخول غير صحيحة.'
+    };
+    return map[code] || 'حدث خطأ، حاول مرة أخرى.';
+}
+
+// ---------- مراقبة حالة تسجيل الدخول ----------
+onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+
+    if (user) {
+        userStatus.textContent = user.email;
+        authBtn.textContent = 'تسجيل الخروج';
+        historyCard.style.display = 'block';
+        listenToHistory(user.uid);
+    } else {
+        userStatus.textContent = 'غير مسجل الدخول';
+        authBtn.textContent = 'تسجيل الدخول';
+        historyCard.style.display = 'none';
+        if (unsubscribeHistory) unsubscribeHistory();
+        historyList.innerHTML = '';
+    }
+});
+
+// ---------- الاستماع لسجل العمليات (Realtime) ----------
+function listenToHistory(uid) {
+    if (unsubscribeHistory) unsubscribeHistory();
+
+    const historyQuery = query(
+        collection(db, 'users', uid, 'history'),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+    );
+
+    unsubscribeHistory = onSnapshot(historyQuery, (snapshot) => {
+        historyList.innerHTML = '';
+        snapshot.forEach(doc => {
+            const item = doc.data();
+            const li = document.createElement('li');
+            const date = item.createdAt ? item.createdAt.toDate().toLocaleString('ar-EG') : '...';
+            li.innerHTML = `<span>${item.ip}/${item.cidr}</span><span class="history-date">${date}</span>`;
+            historyList.appendChild(li);
+        });
+    });
+}
