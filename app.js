@@ -112,7 +112,9 @@ function renderResult(data) {
             <tr><td>فئة العنوان (Class)</td><td>${data.ipClass}</td></tr>
             <tr><td>نوع العنوان</td><td>${data.isPrivate ? 'خاص (Private) 🔒' : 'عام (Public) 🌐'}</td></tr>
         </table>
+        <button id="exportPdfBtn" class="export-pdf-btn">📄 تصدير النتيجة كـ PDF</button>
     `;
+    document.dispatchEvent(new CustomEvent('subnetResult', { detail: { type: 'ipv4', data } }));
 }
 
 function renderIPv6Result(data) {
@@ -127,7 +129,9 @@ function renderIPv6Result(data) {
             <tr><td>نوع العنوان</td><td>${data.addressType}</td></tr>
         </table>
         <p class="ipv6-note">💡 ملاحظة: IPv6 لا يستخدم مفهوم Broadcast مثل IPv4 — بديله الرسمي هو Multicast.</p>
+        <button id="exportPdfBtn" class="export-pdf-btn">📄 تصدير النتيجة كـ PDF</button>
     `;
+    document.dispatchEvent(new CustomEvent('subnetResult', { detail: { type: 'ipv6', data } }));
 }
 
 calcBtn.addEventListener('click', async function () {

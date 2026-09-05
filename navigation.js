@@ -11,7 +11,12 @@ const titles = {
     subnetting: 'حاسبة الشبكات المتقدمة',
     algorithm: 'محاكي خوارزمية Dijkstra',
     wireshark: 'محاكي تحليل الحزم (Wireshark)',
-    terminal: 'محاكي طرفية Linux'
+    terminal: 'محاكي طرفية Linux',
+    vlsm: 'حاسبة VLSM',
+    compare: 'مقارنة عناوين IP',
+    editor: 'محرر شبكة Dijkstra التفاعلي',
+    anomaly: 'كشف الشذوذ بالذكاء الاصطناعي',
+    dashboard: 'لوحة الإحصائيات والتقدم'
 };
 
 navLinks.forEach(link => {

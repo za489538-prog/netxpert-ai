@@ -1,0 +1,1 @@
+export function aggregateUsage(events = []) { const byFeature = {}; let anomalyCount = 0; events.forEach(e => { const f = e.feature || 'unknown'; byFeature[f] = (byFeature[f] || 0) + 1; if (e.anomalous) anomalyCount += 1; }); return { totalActivities: events.length, byFeature, anomalyCount, anomalyRate: events.length ? Math.round(anomalyCount / events.length * 100) : 0 }; }

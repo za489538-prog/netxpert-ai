@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetXpert AI - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <aside class="sidebar">
+            <h2 class="logo">NetXpert <span>AI</span></h2>
+            <ul class="nav-links">
+                <li><a href="#" class="active" data-view="subnetting">أدوات الشبكات (Subnetting)</a></li>
+                <li><a href="#" data-view="algorithm">محاكي الخوارزميات</a></li>
+                <li><a href="#" data-view="wireshark">تحليل البيانات (Wireshark)</a></li>
+                <li><a href="#" data-view="terminal">سطر الأوامر (Linux Terminal)</a></li>
+                <li><a href="#" data-view="vlsm">حاسبة VLSM</a></li>
+                <li><a href="#" data-view="compare">مقارنة عناوين IP</a></li>
+                <li><a href="#" data-view="editor">محرر شبكة Dijkstra</a></li>
+                <li><a href="#" data-view="anomaly">كشف الشذوذ AI</a></li>
+                <li><a href="#" data-view="dashboard">لوحة الإحصائيات</a></li>
+            </ul>
+        </aside>
+        <!-- منطقة العمل الرئيسية -->
+        <main class="main-content">
+            <header>
+                <h1 id="pageTitle">حاسبة الشبكات المتقدمة</h1>
+                <div class="header-actions">
+                    <button id="themeToggleBtn" class="theme-toggle-btn" title="تبديل الوضع الليلي/النهاري">🌙</button>
+                    <span id="userStatus" class="user-status">غير مسجل الدخول</span>
+                    <button id="authBtn" class="auth-btn">تسجيل الدخول</button>
+                    <button id="aiBtn" class="ai-btn">اسأل المساعد الذكي 🤖</button>
+                </div>
+            </header>
+
+            <!-- ===== View 1: Subnetting ===== -->
+            <section class="tool-workspace view-section" id="view-subnetting">
+                <div class="card">
+                    <h3>أدخل عنوان IP و CIDR</h3>
+
+                    <input type="text" id="ipInput" placeholder="مثال: 192.168.1.10 أو 2001:db8::1">
+                    <div id="ipVersionBadge" class="ip-version-badge" style="display:none;"></div>
+
+                    <label class="cidr-label">Prefix / CIDR: <span id="cidrValue">24</span></label>
+                    <input type="range" id="cidrInput" min="0" max="32" value="24">
+
+                    <button id="calcBtn">تحليل الشبكة</button>
+
+                    <div id="errorBox" class="error-box"></div>
+
+                    <div id="result" class="result-box">
+                        <!-- تظهر النتائج هنا -->
+                    </div>
+                </div>
+
+                <!-- سجل العمليات السابقة (يظهر فقط لو المستخدم مسجل دخول) -->
+                <div class="card history-card" id="historyCard" style="display:none;">
+                    <h3>سجل عمليات البحث 📜</h3>
+                    <ul id="historyList" class="history-list"></ul>
+                </div>
+            </section>
+
+            <!-- ===== View 2: Algorithm Simulator (Dijkstra) ===== -->
+            <section class="tool-workspace view-section" id="view-algorithm" style="display:none;">
+                <div class="card algo-card">
+                    <h3>محاكي خوارزمية Dijkstra لإيجاد أقصر مسار 🌐</h3>
+                    <p class="algo-desc">اختر روتر البداية والنهاية، وشوف كيف تحسب الخوارزمية أقصر مسار عبر الشبكة تلقائياً.</p>
+
+                    <div class="algo-controls">
+                        <div class="algo-select-group">
+                            <label>من (Source)</label>
+                            <select id="sourceSelect"></select>
+                        </div>
+                        <div class="algo-select-group">
+                            <label>إلى (Destination)</label>
+                            <select id="destSelect"></select>
+                        </div>
+                        <button id="findPathBtn">إيجاد أقصر مسار</button>
+                    </div>
+
+                    <svg id="algoSvg" viewBox="0 0 700 400" class="algo-svg"></svg>
+
+                    <div id="algoResult" class="algo-result" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ===== View 3: Wireshark-style Packet Analyzer ===== -->
+            <section class="tool-workspace view-section" id="view-wireshark" style="display:none;">
+                <div class="card wireshark-card">
+                    <h3>محاكي تحليل الحزم (Packet Analyzer) 📡</h3>
+                    <p class="algo-desc">محاكاة لتجربة أداة Wireshark: حزم بيانات وهمية واقعية الشكل، مع إمكانية الفلترة.</p>
+
+                    <div class="wireshark-toolbar">
+                        <input type="text" id="packetFilter" placeholder="فلتر مثل: TCP أو 192.168.1.1">
+                        <button id="captureBtn">🔄 التقاط حزم جديدة</button>
+                    </div>
+
+                    <div class="wireshark-table-wrap">
+                        <table class="wireshark-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>الوقت</th>
+                                    <th>المصدر</th>
+                                    <th>الوجهة</th>
+                                    <th>البروتوكول</th>
+                                    <th>الحجم</th>
+                                    <th>معلومات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="packetTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== View 4: Linux Terminal Simulator ===== -->
+            <section class="tool-workspace view-section" id="view-terminal" style="display:none;">
+                <div class="card terminal-card">
+                    <h3>محاكي طرفية Linux 🐧</h3>
+                    <p class="algo-desc">جرب أوامر شبكات حقيقية زي ping، ifconfig, traceroute. اكتب <code>help</code> لعرض كل الأوامر.</p>
+
+                    <div class="terminal-window" id="terminalWindow">
+                        <div class="terminal-line">مرحباً بك في NetXpert Terminal Simulator. اكتب "help" للمساعدة.</div>
+                    </div>
+                    <div class="terminal-input-row">
+                        <span class="terminal-prompt">user@netxpert:~$</span>
+                        <input type="text" id="terminalInput" autocomplete="off" spellcheck="false">
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== View 5: VLSM Calculator ===== -->
+            <section class="tool-workspace view-section" id="view-vlsm" style="display:none;">
+                <div class="card vlsm-card">
+                    <h3>حاسبة VLSM (Variable Length Subnet Masking) 🧩</h3>
+                    <p class="algo-desc">وزّع شبكتك الأساسية على عدة شبكات فرعية بأحجام مختلفة حسب عدد الأجهزة المطلوب لكل قسم، بأقل هدر ممكن للعناوين.</p>
+
+                    <div class="vlsm-base-inputs">
+                        <div class="vlsm-input-group">
+                            <label>الشبكة الأساسية (Base Network)</label>
+                            <input type="text" id="vlsmBaseIp" placeholder="مثال: 192.168.1.0" value="192.168.1.0">
+                        </div>
+                        <div class="vlsm-input-group">
+                            <label>Prefix / CIDR الأساسي</label>
+                            <input type="number" id="vlsmBaseCidr" min="0" max="30" value="24">
+                        </div>
+                    </div>
+
+                    <h4 class="vlsm-subtitle">الشبكات الفرعية المطلوبة</h4>
+                    <div id="vlsmRequirementsList" class="vlsm-requirements-list">
+                        <!-- صفوف الشبكات الفرعية تُضاف هنا ديناميكياً -->
+                    </div>
+                    <button id="vlsmAddRowBtn" class="vlsm-add-btn">+ إضافة شبكة فرعية</button>
+
+                    <button id="vlsmCalcBtn" class="vlsm-calc-btn">احسب توزيع VLSM</button>
+
+                    <div id="vlsmError" class="error-box"></div>
+
+                    <div id="vlsmResult" class="vlsm-result-wrap" style="display:none;">
+                        <table class="wireshark-table vlsm-table">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>المطلوب</th>
+                                    <th>Prefix</th>
+                                    <th>Subnet Mask</th>
+                                    <th>Network Address</th>
+                                    <th>Broadcast</th>
+                                    <th>نطاق الـ Hosts الصالح</th>
+                                    <th>Usable Hosts</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vlsmResultBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== View: مقارنة عناوين IP ===== -->
+            <section class="tool-workspace view-section" id="view-compare" style="display:none;">
+                <div class="card vlsm-card">
+                    <h3>مقارنة عناوين IP 🔍</h3>
+                    <p class="algo-desc">قارن بين عنوانين IPv4 لمعرفة أيهما أكبر رقمياً، هل هما بنفس الشبكة، وعدد البتات المشتركة بينهما بصرياً.</p>
+
+                    <div class="vlsm-base-inputs">
+                        <div class="vlsm-input-group">
+                            <label>العنوان الأول</label>
+                            <input type="text" id="compareIp1" placeholder="مثال: 192.168.1.10">
+                        </div>
+                        <div class="vlsm-input-group">
+                            <label>العنوان الثاني</label>
+                            <input type="text" id="compareIp2" placeholder="مثال: 192.168.1.200">
+                        </div>
+                        <div class="vlsm-input-group">
+                            <label>Prefix / CIDR المشترك (اختياري)</label>
+                            <input type="number" id="compareCidr" min="0" max="32" placeholder="مثال: 24">
+                        </div>
+                    </div>
+
+                    <button id="compareBtn" class="vlsm-calc-btn">قارن العنوانين</button>
+
+                    <div id="compareError" class="error-box"></div>
+
+                    <div id="compareResult" class="compare-result-wrap" style="display:none;">
+                        <div class="result-box" id="compareSummary"></div>
+
+                        <h4 class="vlsm-subtitle">التمثيل الثنائي (Binary) — البتات المختلفة ملوّنة</h4>
+                        <div class="binary-compare">
+                            <div class="binary-row" id="binaryRow1"></div>
+                            <div class="binary-row" id="binaryRow2"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== View: Interactive Dijkstra Editor ===== -->
+            <section class="tool-workspace view-section" id="view-editor" style="display:none;">
+                <div class="card editor-card">
+                    <h3>محرر شبكة Dijkstra التفاعلي</h3>
+                    <p class="algo-desc">أنشئ عقداً ووصلات بأوزان موجبة ثم احسب أقصر مسار.</p>
+                    <svg id="editorSvg" class="editor-svg" viewBox="0 0 620 360"></svg>
+                    <div class="editor-controls">
+                        <input id="nodeId" maxlength="1" placeholder="حرف العقدة">
+                        <button id="addNodeBtn">+ عقدة</button>
+                        <select id="edgeFrom"></select>
+                        <select id="edgeTo"></select>
+                        <input id="edgeCost" type="number" min="1" placeholder="الوزن">
+                        <button id="addEdgeBtn">+ وصلة</button>
+                    </div>
+                    <div class="editor-controls">
+                        <label>من <select id="editorSource"></select></label>
+                        <label>إلى <select id="editorDestination"></select></label>
+                        <button id="editorFindBtn" class="vlsm-calc-btn">احسب أقصر مسار</button>
+                    </div>
+                    <div id="editorMessage" style="display:none"></div>
+                </div>
+            </section>
+
+            <!-- ===== View: Explainable Anomaly Detection ===== -->
+            <section class="tool-workspace view-section" id="view-anomaly" style="display:none;">
+                <div class="card">
+                    <h3>كشف الشذوذ الشبكي بالذكاء الاصطناعي</h3>
+                    <p class="algo-desc">تحليل تعليمي قابل للتفسير لعينة اتصال دون إرسال بياناتك.</p>
+                    <div class="vlsm-base-inputs">
+                        <div class="vlsm-input-group"><label>عنوان المصدر</label><input id="anomalyIp" value="192.168.1.10"></div>
+                        <div class="vlsm-input-group"><label>المنفذ</label><input id="anomalyPort" type="number" value="443"></div>
+                        <div class="vlsm-input-group"><label>الاتصالات</label><input id="anomalyConnections" type="number" value="12"></div>
+                        <div class="vlsm-input-group"><label>محاولات الدخول الفاشلة</label><input id="anomalyLogins" type="number" value="0"></div>
+                    </div>
+                    <button id="anomalyAnalyzeBtn" class="vlsm-calc-btn">حلل العينة</button>
+                    <div id="anomalyResult" style="display:none"></div>
+                </div>
+            </section>
+
+            <!-- ===== View: Progress Dashboard ===== -->
+            <section class="tool-workspace view-section" id="view-dashboard" style="display:none;">
+                <div class="card">
+                    <h3>لوحة الإحصائيات والتقدم</h3>
+                    <p class="algo-desc">إحصائيات مجهولة محفوظة في متصفحك فقط.</p>
+                    <div id="scoreWidget" class="score-widget"></div>
+                    <div id="dashboardStats"></div>
+                    <h4>الشارات</h4>
+                    <div id="badgesList" class="badges-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <!-- Modal تسجيل الدخول / إنشاء حساب -->
+    <div id="authModal" class="modal-overlay">
+        <div class="modal-box">
+            <button class="modal-close" data-close="authModal">✕</button>
+            <h3 id="authModalTitle">تسجيل الدخول</h3>
+            <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
+            <input type="password" id="authPassword" placeholder="كلمة المرور">
+            <div id="authError" class="error-box"></div>
+            <button id="authSubmitBtn" class="submit-btn">دخول</button>
+            <p class="switch-text">
+                ما عندك حساب؟ <a href="#" id="switchToRegister">أنشئ حساب جديد</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Modal المساعد الذكي -->
+    <div id="aiModal" class="modal-overlay">
+        <div class="modal-box ai-modal-box">
+            <button class="modal-close" data-close="aiModal">✕</button>
+            <h3>المساعد الذكي 🤖</h3>
+            <div id="aiChatWindow" class="ai-chat-window">
+                <div class="ai-msg ai-msg-bot">مرحباً! أنا مساعدك التقني في NetXpert AI. اسألني عن أي شي متعلق بالشبكات.</div>
+            </div>
+            <div class="ai-input-row">
+                <input type="text" id="aiInput" placeholder="اكتب سؤالك هنا...">
+                <button id="aiSendBtn">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="export-pdf.js"></script>
+    <script src="theme.js"></script>
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="app.js"></script>
+    <script type="module" src="ai-assistant.js"></script>
+    <script type="module" src="algorithm-simulator.js"></script>
+    <script type="module" src="packet-analyzer.js"></script>
+    <script type="module" src="terminal-simulator.js"></script>
+    <script type="module" src="vlsm-simulator.js"></script>
+    <script type="module" src="ip-compare-simulator.js"></script>
+    <script type="module" src="gamification.js"></script>
+    <script type="module" src="network-editor.js"></script>
+    <script type="module" src="anomaly-simulator.js"></script>
+    <script src="navigation.js"></script>
+</body>
+</html>

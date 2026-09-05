@@ -1,0 +1,4 @@
+export const ACTION_POINTS = { subnet: 10, ipv6: 15, vlsm: 20, compare: 10, dijkstra: 25, anomaly: 20 };
+export const BADGES = [{ id: 'first-step', name: 'البداية الذكية', threshold: 10 }, { id: 'network-builder', name: 'مهندس الشبكات', threshold: 50 }, { id: 'algorithmist', name: 'محلل الخوارزميات', threshold: 100 }, { id: 'netxpert', name: 'NetXpert', threshold: 200 }];
+export function emptyScore() { return { points: 0, actions: {}, badges: [], level: 1 }; }
+export function addPoints(state = emptyScore(), action) { const points = Number(state.points || 0) + Number(ACTION_POINTS[action] || 0); const actions = { ...(state.actions || {}), [action]: Number(state.actions?.[action] || 0) + 1 }; return { points, actions, badges: BADGES.filter(b => points >= b.threshold).map(b => b.id), level: Math.floor(points / 50) + 1 }; }
