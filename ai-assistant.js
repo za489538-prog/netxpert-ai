@@ -6,9 +6,14 @@
 // اللي بتتواصل مع Gemini API من طرف السيرفر، بحيث المفتاح
 // يضل محفوظ بمتغيرات البيئة على Netlify ولا ينكشف أبداً بالمتصفح.
 //
+// ✅ كمان: كل طلب لازم يترافق مع Firebase ID Token يثبت هوية المستخدم،
+// عشان نمنع أي حدا غير مسجل دخول من استهلاك رصيد Gemini API مجاناً.
+//
 // محلياً (بدون نشر على Netlify) استخدم "netlify dev" عشان الـ Function
 // تشتغل على نفس البورت مع باقي الموقع.
 // ============================================
+
+import { auth } from "./firebase-config.js";
 
 const CHAT_ENDPOINT = "/api/gemini-chat";
 
@@ -64,12 +69,21 @@ function appendMessage(text, sender) {
 }
 
 async function sendToGemini(userMessage) {
+    if (!auth.currentUser) {
+        throw new Error('لازم تسجل دخول الأول عشان تستخدم المساعد الذكي.');
+    }
+
     // نبني سياق المحادثة كامل عشان المساعد يتذكر الكلام السابق
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
+    const idToken = await auth.currentUser.getIdToken();
+
     const response = await fetchWithRetry(CHAT_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ chatHistory })
     });
 
@@ -88,6 +102,13 @@ async function sendToGemini(userMessage) {
 async function handleSend() {
     const message = aiInput.value.trim();
     if (!message) return;
+
+    if (!auth.currentUser) {
+        appendMessage(message, 'user');
+        appendMessage('لازم تسجل دخول الأول عشان تستخدم المساعد الذكي 🔒', 'bot');
+        aiInput.value = '';
+        return;
+    }
 
     appendMessage(message, 'user');
     aiInput.value = '';
