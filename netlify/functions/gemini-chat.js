@@ -3,7 +3,7 @@ import admin from "firebase-admin";
 const MAX_HISTORY_MESSAGES = 40;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-3.6-flash";
 const SYSTEM_CONTEXT = "You are NetXpert AI, a clear networking tutor. Answer in Arabic when the user writes Arabic and explain networking topics simply.";
 
 function getAdmin() {
