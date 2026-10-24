@@ -1,24 +1,23 @@
-# NetXpert AI — Security Setup on Manus
+# NetXpert AI — Security Setup on Netlify
 
 ## What is protected
 
-The public browser code does not contain a Gemini API key. The browser sends the Firebase ID Token to `/api/gemini-chat`, and the Manus server verifies the token before calling the built-in AI service.
+The public browser code does not contain a Gemini API key or Firebase Admin private key. The browser sends the Firebase ID Token to `/api/gemini-chat`, and the Netlify Function verifies the token before calling the Gemini API.
 
-The server also stores a per-user request counter in Firestore using a transaction. The current limit is **20 AI requests per user per 10 minutes**. The counter is stored under `rate_limits/{uid}` and is accessed by the server only.
+The function stores a per-user request counter in Firestore using a transaction. The current limit is **20 AI requests per user per 10 minutes**. The counter is stored under `rate_limits/{uid}` and is accessed by the Firebase Admin SDK on the server only.
 
-## Required Manus secret
+## Required Netlify environment variables
 
-The WebDev project requires one server-side secret:
+Add these variables in the Netlify site settings under **Project configuration → Environment variables**:
 
 ```text
+GEMINI_API_KEY
 FIREBASE_SERVICE_ACCOUNT
 ```
 
-Its value must be the complete Firebase Service Account JSON downloaded from Firebase Console. It must never be placed in browser JavaScript, GitHub, Firestore Rules, screenshots, or chat messages.
+`GEMINI_API_KEY` is the Gemini server key. `FIREBASE_SERVICE_ACCOUNT` must contain the complete Firebase Service Account JSON downloaded from Firebase Console. Neither value may be placed in browser JavaScript, GitHub, Firestore Rules, screenshots, or chat messages.
 
-The current Manus implementation reads this value only from `server/_core/env.ts` and uses it in `server/firebase-security.ts` for Firebase ID Token verification and Firestore transactions.
-
-The Manus built-in AI integration supplies the server-side model access. Do not add a Gemini key to `client/public/netxpert`.
+The `FIREBASE_SERVICE_ACCOUNT` JSON is parsed by the Netlify Function and escaped private-key newlines are normalized before Firebase Admin initialization.
 
 ## Firebase Console steps
 
@@ -27,34 +26,44 @@ The Manus built-in AI integration supplies the server-side model access. Do not 
 3. Select **Service accounts**.
 4. Click **Generate new private key**.
 5. Keep the downloaded JSON file private.
-6. Add the complete JSON content as the `FIREBASE_SERVICE_ACCOUNT` secret in the Manus WebDev project.
+6. Copy the complete JSON content into the Netlify environment variable named `FIREBASE_SERVICE_ACCOUNT`.
+7. Add the Gemini key to `GEMINI_API_KEY` in Netlify only.
 
 ## Firestore Rules
 
-The repository contains `firestore.rules`. Deploy these rules from the Firebase project so that each signed-in user can read and write only their own history:
+Deploy the repository `firestore.rules` from the Firebase project so that each signed-in user can read and write only their own history:
 
 ```text
 users/{uid}/history/{historyId}
 ```
 
-All other Firestore paths are denied by default. The server-side `rate_limits` collection is written by Firebase Admin and is not opened to the browser by these rules.
+All other document paths are denied by default. The server-side `rate_limits` collection is written by Firebase Admin and is not opened to the browser by these rules.
+
+## Netlify routing
+
+`netlify.toml` publishes the static project and maps `/api/*` to `/.netlify/functions/:splat`. The active AI endpoint is:
+
+```text
+/api/gemini-chat
+```
+
+The Function rejects non-POST methods, unauthenticated requests, invalid JSON, bodies over 1 MB, malformed chat history, invalid roles, empty text parts, and text parts over 8,000 characters.
 
 ## Verification checklist
 
 - Sign out and try the AI assistant: the request must be rejected with an authentication message.
-- Sign in and try the AI assistant: the request must reach the server and return an answer.
-- Send more than 20 accepted requests within ten minutes for one Firebase account: the server must return HTTP 429.
+- Sign in and try the AI assistant: the request must reach the Netlify Function and return an answer.
+- Send more than 20 accepted requests within ten minutes for one Firebase account: the Function must return HTTP 429.
 - Check the browser Network panel: no Gemini API key or Service Account JSON may appear.
 - Run the project tests:
 
 ```bash
-pnpm test
-pnpm check
-pnpm build
+npm ci
+npm test -- --runInBand
 ```
 
-The test suite includes Firebase Admin connectivity validation and six deterministic rate-limit scenarios.
+The suite includes Firebase Admin mocking, authentication rejection, JSON validation, body-size validation, chat-history validation, private-key normalization, rate limiting transaction flow, and Gemini response handling.
 
-## Legacy files
+## Important note
 
-The old `netlify/functions/gemini-chat.js` and `netlify.toml` files may remain in the historical static project for compatibility, but they are not used by the current Manus WebDev server. The active endpoint is implemented in `server/_core/index.ts`.
+Netlify cannot automatically provide Manus Forge access. This deployment intentionally uses the Gemini API through the server-only `GEMINI_API_KEY` environment variable. The documentation and presentation must describe this Netlify architecture consistently.
