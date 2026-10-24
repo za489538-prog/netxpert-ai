@@ -14,6 +14,7 @@
 // ============================================
 
 import { auth } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const CHAT_ENDPOINT = "/api/gemini-chat";
 
@@ -56,6 +57,28 @@ const aiSendBtn = document.getElementById('aiSendBtn');
 
 let chatHistory = [];
 
+// Firebase restores a saved session asynchronously. Keep a synchronized user
+// reference so the assistant does not reject a user who has just signed in.
+let observedUser = auth.currentUser;
+let resolveAuthReady;
+const authReady = new Promise((resolve) => {
+    resolveAuthReady = resolve;
+});
+let authStateInitialized = false;
+
+onAuthStateChanged(auth, (user) => {
+    observedUser = user;
+    if (!authStateInitialized) {
+        authStateInitialized = true;
+        resolveAuthReady(user);
+    }
+});
+
+async function getAuthenticatedUser() {
+    await authReady;
+    return observedUser || auth.currentUser;
+}
+
 aiBtn.addEventListener('click', () => {
     aiModal.classList.add('open');
 });
@@ -68,15 +91,15 @@ function appendMessage(text, sender) {
     aiChatWindow.scrollTop = aiChatWindow.scrollHeight;
 }
 
-async function sendToGemini(userMessage) {
-    if (!auth.currentUser) {
+async function sendToGemini(userMessage, user) {
+    if (!user) {
         throw new Error('لازم تسجل دخول الأول عشان تستخدم المساعد الذكي.');
     }
 
     // نبني سياق المحادثة كامل عشان المساعد يتذكر الكلام السابق
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
 
-    const idToken = await auth.currentUser.getIdToken();
+    const idToken = await user.getIdToken();
 
     const response = await fetchWithRetry(CHAT_ENDPOINT, {
         method: 'POST',
@@ -103,7 +126,8 @@ async function handleSend() {
     const message = aiInput.value.trim();
     if (!message) return;
 
-    if (!auth.currentUser) {
+    const user = await getAuthenticatedUser();
+    if (!user) {
         appendMessage(message, 'user');
         appendMessage('لازم تسجل دخول الأول عشان تستخدم المساعد الذكي 🔒', 'bot');
         aiInput.value = '';
@@ -122,7 +146,7 @@ async function handleSend() {
     aiChatWindow.scrollTop = aiChatWindow.scrollHeight;
 
     try {
-        const reply = await sendToGemini(message);
+        const reply = await sendToGemini(message, user);
         typingIndicator.remove();
         appendMessage(reply, 'bot');
     } catch (err) {
