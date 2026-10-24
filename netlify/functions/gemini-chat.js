@@ -47,11 +47,21 @@ function getAdmin() {
 
 async function verifyUser(event) {
   const match = getHeader(event, "authorization").match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
+  if (!match) return { uid: null, setupError: false };
+
+  let firebaseAdmin;
   try {
-    return (await getAdmin().auth().verifyIdToken(match[1])).uid;
-  } catch {
-    return null;
+    firebaseAdmin = getAdmin();
+  } catch (error) {
+    console.error("[AI] Firebase Admin setup failed", error?.message || "unknown error");
+    return { uid: null, setupError: true };
+  }
+
+  try {
+    return { uid: (await firebaseAdmin.auth().verifyIdToken(match[1])).uid, setupError: false };
+  } catch (error) {
+    console.error("[AI] Firebase ID token verification failed", error?.code || "unknown", error?.message || "unknown error");
+    return { uid: null, setupError: false };
   }
 }
 
@@ -143,14 +153,12 @@ async function callGemini(chatHistory) {
 async function handler(event) {
   if (event?.httpMethod !== "POST") return response(405, { error: "Method not allowed" });
 
-  let uid;
-  try {
-    uid = await verifyUser(event);
-  } catch (error) {
-    console.error("[AI] Firebase verification setup failed", error);
+  const authResult = await verifyUser(event);
+  if (authResult.setupError) {
     return response(503, { error: "Authentication service is temporarily unavailable" });
   }
-  if (!uid) return response(401, { error: "Please sign in before using the AI assistant" });
+  if (!authResult.uid) return response(401, { error: "Please sign in before using the AI assistant" });
+  const uid = authResult.uid;
 
   let payload;
   try {
