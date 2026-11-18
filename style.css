@@ -767,4 +767,33 @@ button#calcBtn:hover {
 .score-widget { display: flex; gap: 18px; align-items: center; background: var(--input-bg); border: 1px solid var(--border-color); padding: 16px; border-radius: 10px; margin: 14px 0; }
 .score-widget strong { color: #fbbf24; font-size: 26px; }.score-widget span { color: var(--primary-neon); }.score-widget small { color: var(--muted-text); }
 .metric-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 12px 0; }.metric { background: var(--input-bg); padding: 14px; border-radius: 8px; text-align: center; }.metric b { display:block; font-size: 24px; color: var(--primary-neon); }.metric span { color: var(--muted-text); font-size: 13px; }.stats-list { list-style:none; padding:0; }.stats-list li { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--border-color); }.badges-list { display:flex; flex-wrap:wrap; gap:8px; }.badge { border:1px solid #fbbf24; color:#fbbf24; padding:7px 10px; border-radius:20px; font-size:12px; }.anomaly-high { border-right:4px solid #ef4444; }.anomaly-medium { border-right:4px solid #f59e0b; }.anomaly-low { border-right:4px solid #10b981; }
-@media (max-width: 700px) { .metric-grid { grid-template-columns: 1fr; }.score-widget { flex-wrap: wrap; } }
+@media (max-width: 700px) {
+    .dashboard-container { display: block; }
+    .sidebar {
+        width: 100%;
+        padding: 12px 16px;
+        border-left: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .logo { margin-bottom: 12px; font-size: 22px; }
+    .nav-links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .nav-links li { margin-bottom: 0; }
+    .nav-links a { display: block; padding: 7px 8px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; }
+    .main-content { padding: 16px; }
+    header { align-items: stretch; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+    header h1 { font-size: 24px; line-height: 1.35; }
+    .header-actions { flex-wrap: wrap; justify-content: flex-start; }
+    .header-actions button { min-height: 40px; }
+    .ai-btn, .auth-btn { padding: 9px 12px; }
+    .card { max-width: 100%; padding: 18px; }
+    .tool-workspace { gap: 12px; }
+    .vlsm-input-group { min-width: 100%; }
+    .vlsm-requirement-row { align-items: stretch; flex-wrap: wrap; }
+    .vlsm-req-name, .vlsm-req-hosts { min-width: 120px; }
+    .result-box, .vlsm-result-wrap, .wireshark-table-wrap { overflow-x: auto; }
+    .ai-modal-box { width: calc(100vw - 32px); max-width: none; }
+    .ai-chat-window { height: min(300px, 45vh); }
+    .metric-grid { grid-template-columns: 1fr; }
+    .score-widget { flex-wrap: wrap; }
+    .editor-svg { min-height: 220px; }
+}
