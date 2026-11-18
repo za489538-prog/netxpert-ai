@@ -18,6 +18,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/f
 
 const CHAT_ENDPOINT = "/api/gemini-chat";
 
+const MAX_CHAT_HISTORY_MESSAGES = 20;
+
 // الأخطاء المؤقتة اللي يستاهل نعيد المحاولة معها (429 = Rate Limit، 500/502/503/504 = مشاكل سيرفر مؤقتة)
 const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504];
 const MAX_RETRIES = 3;
@@ -56,6 +58,12 @@ const aiInput = document.getElementById('aiInput');
 const aiSendBtn = document.getElementById('aiSendBtn');
 
 let chatHistory = [];
+
+function trimChatHistory() {
+    if (chatHistory.length > MAX_CHAT_HISTORY_MESSAGES) {
+        chatHistory = chatHistory.slice(-MAX_CHAT_HISTORY_MESSAGES);
+    }
+}
 
 // Firebase restores a saved session asynchronously. Keep a synchronized user
 // reference so the assistant does not reject a user who has just signed in.
@@ -96,30 +104,38 @@ async function sendToGemini(userMessage, user) {
         throw new Error('لازم تسجل دخول الأول عشان تستخدم المساعد الذكي.');
     }
 
-    // نبني سياق المحادثة كامل عشان المساعد يتذكر الكلام السابق
+    // نضيف السؤال مؤقتاً ونرسل آخر 20 رسالة فقط حتى لا يكبر الطلب بلا حدود.
     chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+    trimChatHistory();
 
-    const idToken = await user.getIdToken();
+    try {
+        const idToken = await user.getIdToken();
 
-    const response = await fetchWithRetry(CHAT_ENDPOINT, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({ chatHistory })
-    });
+        const response = await fetchWithRetry(CHAT_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ chatHistory })
+        });
 
-    const data = await response.json().catch(() => ({}));
+        const data = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-        throw new Error(data?.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+            throw new Error(data?.error || `HTTP ${response.status}`);
+        }
+
+        const reply = data?.reply || 'ما قدرت أفهم السؤال، حاول تصيغه بطريقة ثانية.';
+
+        chatHistory.push({ role: 'model', parts: [{ text: reply }] });
+        trimChatHistory();
+        return reply;
+    } catch (error) {
+        // لا نحتفظ بالسؤال إذا فشل التوكن أو الطلب أو خدمة الذكاء الاصطناعي.
+        chatHistory.pop();
+        throw error;
     }
-
-    const reply = data?.reply || 'ما قدرت أفهم السؤال، حاول تصيغه بطريقة ثانية.';
-
-    chatHistory.push({ role: 'model', parts: [{ text: reply }] });
-    return reply;
 }
 
 async function handleSend() {
