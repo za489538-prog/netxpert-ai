@@ -10,9 +10,9 @@ After running the algorithm, the application calculates the shortest path and di
 
 The editor reuses the existing pure Dijkstra implementation in `logic/dijkstra-logic.js`. This keeps the algorithm independent from the user interface and makes it easier to test, maintain, and extend.
 
-### 2. Explainable Network Anomaly Detection
+### 2. Explainable Rule-Based Anomaly Detection
 
-A lightweight educational anomaly-detection module was implemented in `logic/anomaly-logic.js`. The module analyzes network-event attributes such as the source IPv4 address, port number, connection count, and failed login attempts.
+A lightweight educational Explainable Rule-Based Anomaly Detection module was implemented in `logic/anomaly-logic.js`. The module analyzes network-event attributes such as the source IPv4 address, port number, connection count, and failed login attempts.
 
 The system produces an explainable risk score between 0 and 100 and classifies the event as low, medium, or high risk. It also provides explicit findings explaining why an event was considered suspicious. The implemented indicators include invalid IP addresses, public source addresses, invalid ports, malformed payload values, connection bursts, and repeated failed login attempts.
 
@@ -60,8 +60,8 @@ The final structure includes separate files for the interactive editor, anomaly 
 
 The complete automated test suite was executed after the interface correction:
 
-- **10 test suites passed**
-- **110 tests passed**
+- **11 test suites passed**
+- **118 tests passed**
 - **0 failed tests**
 - JavaScript syntax verification passed
 - HTML structure verification passed
