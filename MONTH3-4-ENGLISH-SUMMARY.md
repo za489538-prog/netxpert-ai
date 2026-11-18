@@ -22,7 +22,7 @@ This feature was intentionally designed as an explainable educational model rath
 
 A deterministic gamification system was introduced to increase user engagement. Users receive points for completing networking activities such as subnetting, IPv6 analysis, VLSM calculations, IP comparison, Dijkstra path finding, and anomaly analysis.
 
-The system includes multiple achievement badges and automatically calculates the user’s current level. The score and activity history are stored locally in the browser using `localStorage`, which allows the feature to work without requiring a backend database or exposing personal data.
+The system includes multiple achievement badges and automatically calculates the user’s current level. The score and gamification activity history are stored locally in the browser using `localStorage`, which allows the feature to work without requiring a backend database or exposing personal data. This is separate from the authenticated subnetting calculation history, which is stored per user in Firestore. AI chat messages are not stored in Firestore.
 
 ### 4. Month 3 Testing
 
@@ -36,7 +36,7 @@ New automated tests were added for the anomaly-detection and gamification logic.
 
 A dashboard view was added to display the user’s learning progress and activity statistics. The dashboard currently shows the total number of recorded activities, the number of activities associated with anomalies, the anomaly rate, and usage counts by feature.
 
-The statistics are calculated through a separate aggregation module in `logic/dashboard-logic.js`. This separation keeps data processing independent from the visual interface and makes the dashboard easier to migrate to a centralized database in the future.
+The statistics are calculated through a separate aggregation module in `logic/dashboard-logic.js` from the local gamification activity data. This separation keeps data processing independent from the visual interface and makes the dashboard easier to migrate to a centralized database in the future.
 
 ### 2. Privacy-Preserving Local Statistics
 
