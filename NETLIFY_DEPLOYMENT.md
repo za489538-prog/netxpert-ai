@@ -47,7 +47,7 @@ npm ci
 npm test -- --runInBand
 ```
 
-The current suite passes 11 suites and 118 tests.
+The current suite passes 11 suites and 119 tests with zero failures.
 
 ## Important migration note
 
