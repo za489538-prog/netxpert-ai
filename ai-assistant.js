@@ -20,8 +20,9 @@ const CHAT_ENDPOINT = "/api/gemini-chat";
 
 const MAX_CHAT_HISTORY_MESSAGES = 20;
 
-// الأخطاء المؤقتة اللي يستاهل نعيد المحاولة معها (429 = Rate Limit، 500/502/503/504 = مشاكل سيرفر مؤقتة)
-const RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504];
+// نعيد المحاولة فقط مع أخطاء الخادم المؤقتة. 429 لا يعاد حتى لا نكرر طلباً
+// مرفوضاً بسبب الحصة أو نزيد الضغط على الخدمة.
+const RETRYABLE_STATUS_CODES = [500, 502, 503, 504];
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 800;
 

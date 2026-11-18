@@ -90,6 +90,29 @@ async function consumeRateLimit(uid) {
   });
 }
 
+async function releaseRateLimit(uid) {
+  const firestore = getAdmin().firestore();
+  const ref = firestore.collection("rate_limits").doc(uid);
+  const now = Date.now();
+
+  return firestore.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) return;
+
+    const record = snapshot.data();
+    const windowStart = Number(record?.windowStart);
+    const count = Number(record?.count);
+    if (!Number.isFinite(windowStart) || !Number.isInteger(count) || count <= 0) return;
+    if (now - windowStart >= RATE_LIMIT_WINDOW_MS) return;
+
+    transaction.set(ref, {
+      ...record,
+      count: count - 1,
+      updatedAt: now,
+    });
+  });
+}
+
 function parsePayload(event) {
   if (!event.body) throw new Error("Invalid JSON body");
   const rawBody = event.isBase64Encoded
@@ -171,15 +194,24 @@ async function handler(event) {
   const validation = validateChatHistory(payload);
   if (!validation.valid) return response(400, { error: validation.message });
 
+  let rateLimitConsumed = false;
   try {
     if (!(await consumeRateLimit(uid))) {
       return response(429, { error: "AI usage limit reached. Please try again later." });
     }
+    rateLimitConsumed = true;
 
     const reply = await callGemini(validation.chatHistory);
     return response(200, { reply });
   } catch (error) {
     console.error("[AI] Request failed", error);
+    if (rateLimitConsumed) {
+      try {
+        await releaseRateLimit(uid);
+      } catch (releaseError) {
+        console.error("[AI] Failed to restore rate-limit slot", releaseError);
+      }
+    }
     if (error.statusCode) return response(error.statusCode, { error: error.message });
     if (error.message === "AI service is not configured") {
       return response(500, { error: error.message });
@@ -188,4 +220,4 @@ async function handler(event) {
   }
 }
 
-module.exports = { handler, _test: { validateChatHistory, parseServiceAccount } };
+module.exports = { handler, _test: { validateChatHistory, parseServiceAccount, releaseRateLimit } };

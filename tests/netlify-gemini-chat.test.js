@@ -101,4 +101,25 @@ describe("Netlify Gemini function security flow", () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).not.toContain("test-gemini-key");
   });
+
+  test("restores one rate-limit slot for a failed AI request", async () => {
+    const transaction = {
+      get: jest.fn(async () => ({
+        exists: true,
+        data: () => ({ windowStart: Date.now(), count: 3, marker: "keep" }),
+      })),
+      set: jest.fn(),
+    };
+    mockAdmin.firestore.mockReturnValue({
+      collection: () => ({ doc: () => ({}) }),
+      runTransaction: async (callback) => callback(transaction),
+    });
+
+    await _test.releaseRateLimit("user-1");
+
+    expect(transaction.set).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ count: 2, marker: "keep" }),
+    );
+  });
 });
